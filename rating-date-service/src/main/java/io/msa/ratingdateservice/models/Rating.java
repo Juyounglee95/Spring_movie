@@ -1,4 +1,4 @@
-package io.msa.ratingdateservice.model;
+package io.msa.ratingdateservice.models;
 
 public class Rating {
 	private String movieId;

@@ -13,9 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.sun.javadoc.ParameterizedType;
+
 import io.msa.moviecatalogservice.models.Catalogitem;
 import io.msa.moviecatalogservice.models.Movie;
 import io.msa.moviecatalogservice.models.Rating;
+import io.msa.moviecatalogservice.models.UserRating;
 
 @RestController
 @RequestMapping("/catalog")
@@ -30,26 +33,26 @@ public class MovieCatalogResources {
 		
 		WebClient.Builder builder = WebClient.builder();
 		
-		List<Rating> ratings = Arrays.asList(
-				new Rating("1234", 4),
-				new Rating("5678", 3)
-		);
+		UserRating ratings =restTemplate.getForObject("http://localhost:8083/ratingdata/users/" +userId, UserRating.class);
 		
-		return ratings.stream().map(rating->{
+		return ratings.getUserRating().stream().map(rating->{
+			//for each movie ID, call movie info service and get details
 			
-			//Movie movie = restTemplate.getForObject("http://localhost:8082/movies/"+rating.getMovieId(), Movie.class);
-			Movie movie = webClientBuilder.build()
-						.get()
-						.uri("http://localhost:8082/movies/"+rating.getMovieId())
-						.retrieve()
-						.bodyToMono(Movie.class)
-						.block();
+			Movie movie = restTemplate.getForObject("http://localhost:8082/movies/"+rating.getMovieId(), Movie.class);
+			//Put them all together
+			
 			return new Catalogitem(movie.getName(), "Description", rating.getRating());
 		})
 		.collect(Collectors.toList());
-		//for each movie ID, call movie info service and get details
 		
-		//Put them all together
+		
 		
 	}
 }
+/*Movie movie = webClientBuilder.build()
+.get()
+.uri("http://localhost:8082/movies/"+rating.getMovieId())
+.retrieve()
+.bodyToMono(Movie.class)
+.block();
+*/
