@@ -1,4 +1,4 @@
-package io.msa.movieinfoservice.resources;
+package io.msa.movieinfoservice.models;
 
 public class Movie {
 	
