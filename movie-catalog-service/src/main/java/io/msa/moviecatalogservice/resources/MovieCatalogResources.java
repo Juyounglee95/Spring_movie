@@ -35,29 +35,43 @@ public class MovieCatalogResources {
 	private WebClient.Builder webClientBuilder;
 	
 	@RequestMapping("/{userId}")
-	@HystrixCommand(fallbackMethod = "getFallbackCatalog")
 	public List<Catalogitem> getCatalog (@PathVariable("userId") String userId){
 		
 		WebClient.Builder builder = WebClient.builder();
 		
-		UserRating ratings =restTemplate.getForObject("http://rating-date-service/ratingsdata/user/" +userId, UserRating.class);
+		UserRating ratings =getUserRating(userId);
 		
-		return ratings.getRatings().stream().map(rating->{
-			//for each movie ID, call movie info service and get details
-			
-			Movie movie = restTemplate.getForObject("http://movie-info-service/movies/"+rating.getMovieId(), Movie.class);
-			//Put them all together
-			
-			return new Catalogitem(movie.getName(), movie.getDescription(), rating.getRating());
-		})
-		.collect(Collectors.toList());
+		return ratings.getRatings().stream()
+				.map(rating-> getCatalogItem(rating))
+				.collect(Collectors.toList());
 		
 		
 		
 	}
-	public List<Catalogitem> getFallbackCatalog(@PathVariable("userId") String userId){
-		return Arrays.asList(new Catalogitem("No movie", "", 0));
+	@HystrixCommand(fallbackMethod = "getFallbackCatalogItem")
+	private Catalogitem getCatalogItem(Rating rating) {
+		Movie movie = restTemplate.getForObject("http://movie-info-service/movies/"+rating.getMovieId(), Movie.class);
+		//Put them all together
+		
+		return new Catalogitem(movie.getName(), movie.getDescription(), rating.getRating());
 	}
+	private Catalogitem getFallbackCatalogItem(Rating rating) {
+		return new Catalogitem("Movie name not found", "", rating.getRating());
+	}
+	
+	@HystrixCommand(fallbackMethod = "getFallbackUserRating")
+	private UserRating getUserRating(@PathVariable("userId") String userId) {
+		return restTemplate.getForObject("http://rating-date-service/ratingsdata/user/" +userId, UserRating.class);
+	}
+	
+	private UserRating getFallbackUserRating(@PathVariable("userId") String userId) {
+		UserRating rating = new UserRating();
+		rating.setUserId(userId);
+		rating.setRatings(Arrays.asList( 
+				new Rating("0",0)));
+		return rating;
+	}
+	
 }
 /*Movie movie = webClientBuilder.build()
 .get()
